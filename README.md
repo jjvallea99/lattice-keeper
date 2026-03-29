@@ -2,7 +2,7 @@
 
 **Sovereign Mission Control for Smallholder Farmers**
 
-Lattice Keeper is a CLI-based agricultural AI assistant built for regenerative farming. It combines local LLM intelligence (via [Ollama](https://ollama.ai)) with live weather data, a multi-tier safety filter (Guardian Vector), and a cryptographically signed forensic audit chain.
+Lattice Keeper is a CLI-based agricultural AI assistant built for regenerative farming. It combines local LLM intelligence (via [Ollama](https://ollama.ai)) with live weather data, a multi-tier safety filter (Guardian Vector), a cryptographically signed forensic audit chain, and extensible sensor context (canopy temperature, NDVI).
 
 ## Features
 

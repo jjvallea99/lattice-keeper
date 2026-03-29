@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """
-Lattice Keeper v0.4.5-fixed — Sovereign Mission Control
-========================================================
-Farm Profile + Live Weather + Guardian Vector v3 + Forensic Audit Chain
-+ Digital Signatures + Bitcoin OP_RETURN Anchoring
+Lattice Keeper v0.5.0 — Sovereign Mission Control
+====================================================
+Full Operator Lattice with Guardian Vector v3, Forensic Auditor,
+ECDSA Digital Signatures, Hash Chaining, Bitcoin OP_RETURN Anchoring,
+Domain-Aware Model Routing, Weather Caching, and Seasonal Awareness.
+
+Merged from v0.4.4 (extra sensor context, detailed genesis anchor)
+and v0.4.5-fixed (all bug fixes, model routing, frost detection).
 
 Dependencies:
-    pip install requests ecdsa bitcoinlib ollama --break-system-packages
+    pip install requests ecdsa ollama --break-system-packages
+    pip install bitcoinlib  # optional, for Bitcoin OP_RETURN anchoring
 
 Ollama must be running:
     ollama serve
     ollama pull llama3.2
+    ollama pull mistral   # optional, for domain-specific routing
 """
 
 import json
@@ -285,7 +291,7 @@ class GuardianVector:
                 return self.hash_chain_file.read_text().strip()
             except OSError:
                 pass
-        return hashlib.sha256(b"Genesis Anchor - Lattice Keeper").hexdigest()
+        return hashlib.sha256(b"Genesis Anchor - Operator Lattice - Jay Valley - 2026").hexdigest()
 
     def _save_hash_chain(self, new_hash: str) -> None:
         try:
@@ -401,9 +407,11 @@ class GuardianVector:
             soil_organic_matter_percent : float
             soil_moisture_percent       : float  (optional)
             soil_temperature_c          : float  (optional)
+            canopy_temp_mean_c          : float  (optional, from sensor)
             current_wind_speed          : float  (km/h)
             forecast_rain_today         : float  (mm)
             frost_risk                  : str    "LOW" | "HIGH" (optional)
+            ndvi_current                : float  (optional, from sensor)
         """
         user_q = context.get("question", "")
         security = self._check_bad_intent(user_q)
@@ -424,6 +432,9 @@ class GuardianVector:
         wind     = context.get("current_wind_speed", 0) or 0
         rain     = context.get("forecast_rain_today", 0) or 0
         frost    = context.get("frost_risk", "LOW")
+        # Extra sensor fields (canopy_temp_mean_c, ndvi_current) are captured
+        # in the audit context_snapshot for forensic logging. Add evaluation
+        # rules here when sensor integration is available.
 
         # Tier 1 — Hard Veto
         if any(w in lower for w in ["glyphosate", "roundup", "2,4-d", "dicamba", "atrazine"]):
@@ -542,8 +553,8 @@ class GuardianVector:
         """Log entry with hash chain + digital signature. Called once inside evaluate()."""
         SNAPSHOT_KEYS = [
             "soil_organic_matter_percent", "soil_moisture_percent",
-            "soil_temperature_c", "frost_risk",
-            "current_wind_speed", "forecast_rain_today",
+            "soil_temperature_c", "canopy_temp_mean_c", "frost_risk",
+            "ndvi_current", "current_wind_speed", "forecast_rain_today",
         ]
         entry = {
             "timestamp":        datetime.now().isoformat(),
@@ -597,7 +608,7 @@ class GuardianVector:
             return True
         try:
             log = json.loads(self.audit_file.read_text())
-            current = hashlib.sha256(b"Genesis Anchor - Lattice Keeper").hexdigest()
+            current = hashlib.sha256(b"Genesis Anchor - Operator Lattice - Jay Valley - 2026").hexdigest()
             vk = VerifyingKey.from_pem(self.public_key_file.read_bytes())
 
             for i, entry in enumerate(log):
@@ -889,7 +900,7 @@ def main() -> None:
     guardian = GuardianVector()
 
     print("\n" + "=" * 70)
-    print("  LATTICE KEEPER v0.4.5 — Sovereign Mission Control")
+    print("  LATTICE KEEPER v0.5.0 — Sovereign Mission Control")
     print(f"  Farm: {profile['farm_name']} | {profile['acres']} acres")
     print("  Guardian: ARMED | Forensic Audit: ACTIVE | Bitcoin: READY")
     print("  Type /help for commands")
@@ -1029,9 +1040,11 @@ def main() -> None:
             "soil_organic_matter_percent": profile.get("soil_organic_matter_percent"),
             "soil_moisture_percent":       profile.get("soil_moisture_percent"),
             "soil_temperature_c":          None,      # add sensor data when available
+            "canopy_temp_mean_c":          None,      # add sensor data when available
             "current_wind_speed":          weather.get("wind", 0),
             "forecast_rain_today":         weather.get("rain", 0),
             "frost_risk":                  frost_risk,
+            "ndvi_current":                None,      # add sensor data when available
         }
         result = guardian.evaluate(raw_ai, ctx)
 
